@@ -10,12 +10,12 @@ class AnimalCompanionPlayerScript : public PlayerScript
 public:
     AnimalCompanionPlayerScript() : PlayerScript("AnimalCompanionPlayerScript") { }
 
-    void OnLogin(Player* player) override
+    void OnPlayerLogin(Player* player) override
     {
         SummonCompanion(player);
     }
 
-    void OnLogout(Player* player) override
+    void OnPlayerLogout(Player* player) override
     {
         DespawnCompanion(player);
     }
