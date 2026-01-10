@@ -73,50 +73,44 @@ private:
         SummonCompanion(player);
     }
 
-    void SummonCompanion(Player* player)
+void SummonCompanion(Player* player)
+{
+    QueryResult result = CharacterDatabase.Query(
+        "SELECT id, entry FROM character_pet WHERE owner = {} AND slot = 0",
+        player->GetGUID().GetCounter());
+
+    if (!result)
+        return;
+
+    Field* fields = result->Fetch();
+    uint32 petDBId = fields[0].Get<uint32>();
+    uint32 entry   = fields[1].Get<uint32>();
+
+    Pet* companion = new Pet(player, HUNTER_PET);
+
+    if (!companion->Create(petDBId, player->GetMap(), player->GetPhaseMask(), entry, 0))
     {
-        // DB-Eintrag des Stall-Pets lesen
-        QueryResult result = CharacterDatabase.Query(
-            "SELECT id, entry FROM character_pet WHERE owner = {} AND slot = 0",
-            player->GetGUID().GetCounter());
-
-        if (!result)
-            return;
-
-        Field* fields = result->Fetch();
-        uint32 petDBId = fields[0].Get<uint32>();
-        uint32 entry   = fields[1].Get<uint32>();
-
-        // GUID vom DB-Pet verwenden
-        ObjectGuid petGuid = MAKE_NEW_GUID(petDBId, 0, HIGHGUID_PET);
-
-        // Pet erstellen
-        Pet* companion = new Pet(player, HUNTER_PET);
-        if (!companion->Create(petGuid.GetCounter(), player->GetMap(), player->GetPhaseMask(), entry, 0))
-        {
-            delete companion;
-            return;
-        }
-
-        // Stats & Spells initialisieren
-        companion->InitStatsForLevel(player->getLevel());
-        companion->InitPetCreateSpells();
-
-        // Damage multiplier anwenden
-        for (auto &spell : companion->GetPetSpells())
-        {
-            if (spell)
-                spell->SetDamage(spell->GetDamage() * damageMultiplier);
-        }
-
-        // Verhalten & Summon
-        companion->SetReactState(REACT_ASSIST);
-        companion->SetCanModifyStats(true);
-        companion->Summon();
-        companion->AIM_Initialize();
-
-        companionGuid = companion->GetGUID();
+        delete companion;
+        return;
     }
+
+    companion->InitStatsForLevel(player->getLevel());
+    companion->InitPetCreateSpells();
+
+    for (auto &spell : companion->GetPetSpells())
+    {
+        if (spell)
+            spell->SetDamage(spell->GetDamage() * damageMultiplier);
+    }
+
+    companion->SetReactState(REACT_ASSIST);
+    companion->SetCanModifyStats(true);
+    companion->Summon();
+    companion->AIM_Initialize();
+
+    companionGuid = companion->GetGUID();
+}
+
 
     void Despawn(Player* player)
     {
