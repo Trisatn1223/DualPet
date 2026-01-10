@@ -18,22 +18,21 @@ public:
     AnimalCompanionPlayerScript()
         : PlayerScript("AnimalCompanionPlayerScript")
     {
-        // Config laden
         moduleEnabled = sConfigMgr->GetOption<bool>("DualPet.Enabled", true);
         damageMultiplier = sConfigMgr->GetOption<float>("DualPet.DamageMultiplier", 1.0f);
     }
 
-    void OnLogin(Player* player) override
+    void OnLogin(Player* player)            // override entfernt
     {
         TrySummon(player);
     }
 
-    void OnLogout(Player* player) override
+    void OnLogout(Player* player)           // override entfernt
     {
         Despawn(player);
     }
 
-    void OnUpdate(Player* player, uint32 /*diff*/) override
+    void OnUpdate(Player* player, uint32 /*diff*/)  // override entfernt
     {
         if (!player->IsInWorld())
             return;
@@ -44,7 +43,6 @@ public:
         if (!player->GetPet() && HasCompanion(player))
             Despawn(player);
     }
-
 private:
     ObjectGuid companionGuid;
     bool moduleEnabled;
