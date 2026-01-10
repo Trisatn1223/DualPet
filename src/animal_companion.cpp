@@ -41,7 +41,7 @@ private:
 
     void TrySummon(Player* player)
     {
-        if (player->IsBot())
+        if (!player->GetSession())
             return;
 
         if (player->getClass() != CLASS_HUNTER)
