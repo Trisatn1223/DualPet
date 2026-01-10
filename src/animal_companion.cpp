@@ -1,3 +1,9 @@
+#include "ScriptMgr.h"
+#include "Player.h"
+#include "Pet.h"
+#include "ObjectAccessor.h"
+#include "DatabaseEnv.h"
+
 class AnimalCompanionPlayerScript : public PlayerScript
 {
 public:
@@ -18,11 +24,9 @@ public:
         if (!player->IsInWorld())
             return;
 
-        // Wenn Hauptpet existiert aber kein Companion → neu beschwören
         if (player->GetPet() && !HasCompanion(player))
             TrySummon(player);
 
-        // Wenn Hauptpet weg → Companion entfernen
         if (!player->GetPet() && HasCompanion(player))
             Despawn(player);
     }
@@ -93,3 +97,8 @@ private:
         companionGuid.Clear();
     }
 };
+
+void AddAnimalCompanionScripts()
+{
+    new AnimalCompanionPlayerScript();
+}
