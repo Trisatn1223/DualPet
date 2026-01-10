@@ -1,49 +1,59 @@
-#include "ScriptMgr.h"
-#include "Player.h"
-#include "Pet.h"
-#include "DatabaseEnv.h"
-
-#define COMPANION_DAMAGE_MOD 0.5f
-
 class AnimalCompanionPlayerScript : public PlayerScript
 {
 public:
     AnimalCompanionPlayerScript() : PlayerScript("AnimalCompanionPlayerScript") { }
 
-    void OnPlayerLogin(Player* player) override
+    void OnLogin(Player* player) override
     {
-        SummonCompanion(player);
+        TrySummon(player);
     }
 
-    void OnPlayerLogout(Player* player) override
+    void OnLogout(Player* player) override
     {
-        DespawnCompanion(player);
+        Despawn(player);
     }
 
-    void OnPetSummon(Player* player, Pet* /*pet*/) override
+    void OnUpdate(Player* player, uint32 /*diff*/) override
     {
-        SummonCompanion(player);
-    }
+        if (!player->IsInWorld())
+            return;
 
-    void OnPetRemove(Player* player, Pet* /*pet*/) override
-    {
-        DespawnCompanion(player);
+        // Wenn Hauptpet existiert aber kein Companion → neu beschwören
+        if (player->GetPet() && !HasCompanion(player))
+            TrySummon(player);
+
+        // Wenn Hauptpet weg → Companion entfernen
+        if (!player->GetPet() && HasCompanion(player))
+            Despawn(player);
     }
 
 private:
     ObjectGuid companionGuid;
 
-    void SummonCompanion(Player* player)
+    bool HasCompanion(Player* player)
     {
+        return companionGuid && ObjectAccessor::GetCreature(*player, companionGuid);
+    }
+
+    void TrySummon(Player* player)
+    {
+        if (player->IsBot())
+            return;
+
         if (player->getClass() != CLASS_HUNTER)
             return;
 
         if (!player->GetPet())
             return;
 
-        if (player->GetGuardianPet())
+        if (HasCompanion(player))
             return;
 
+        SummonCompanion(player);
+    }
+
+    void SummonCompanion(Player* player)
+    {
         QueryResult result = CharacterDatabase.PQuery(
             "SELECT entry FROM character_pet WHERE owner = %u AND slot = 0",
             player->GetGUID().GetCounter());
@@ -61,35 +71,25 @@ private:
         }
 
         companion->SetReactState(REACT_ASSIST);
-        companion->SetCanModifyStats(false);
-        companion->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED);
+        companion->SetCanModifyStats(true);
+
+        companion->InitStatsForLevel(player->getLevel());
+        companion->InitPetCreateSpells();
 
         companion->Summon();
-        companion->SetOwnerGUID(player->GetGUID());
-
-        companion->SetMaxHealth(companion->GetMaxHealth() * COMPANION_DAMAGE_MOD);
-        companion->SetHealth(companion->GetMaxHealth());
-        companion->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE,
-            companion->GetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE) * COMPANION_DAMAGE_MOD);
-        companion->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE,
-            companion->GetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE) * COMPANION_DAMAGE_MOD);
+        companion->AIM_Initialize();
 
         companionGuid = companion->GetGUID();
     }
 
-    void DespawnCompanion(Player* player)
+    void Despawn(Player* player)
     {
         if (!companionGuid)
             return;
 
-        if (Creature* pet = ObjectAccessor::GetCreature(*player, companionGuid))
-            pet->DespawnOrUnsummon();
+        if (Creature* c = ObjectAccessor::GetCreature(*player, companionGuid))
+            c->DespawnOrUnsummon();
 
         companionGuid.Clear();
     }
 };
-
-void AddAnimalCompanionScripts()
-{
-    new AnimalCompanionPlayerScript();
-}
