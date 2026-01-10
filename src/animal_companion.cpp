@@ -94,7 +94,7 @@ void SummonCompanion(Player* player)
         return;
     }
 
-    companion->InitStatsForLevel(player->getLevel());
+    companion->InitStatsForLevel(player->GetLevel());
     companion->InitPetCreateSpells();
 
     for (auto &spell : companion->GetPetSpells())
