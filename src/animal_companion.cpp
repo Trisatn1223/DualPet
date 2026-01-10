@@ -9,17 +9,17 @@ class AnimalCompanionPlayerScript : public PlayerScript
 public:
     AnimalCompanionPlayerScript() : PlayerScript("AnimalCompanionPlayerScript") { }
 
-    void OnLogin(Player* player) override
+    void OnLogin(Player* player)
     {
         TrySummon(player);
     }
 
-    void OnLogout(Player* player) override
+    void OnLogout(Player* player)
     {
         Despawn(player);
     }
 
-    void OnUpdate(Player* player, uint32 /*diff*/) override
+    void OnUpdate(Player* player, uint32 /*diff*/)
     {
         if (!player->IsInWorld())
             return;
