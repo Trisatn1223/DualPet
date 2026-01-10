@@ -56,47 +56,48 @@ private:
         SummonCompanion(player);
     }
 
-    void SummonCompanion(Player* player)
+ void SummonCompanion(Player* player)
+{
+    QueryResult result = CharacterDatabase.Query(
+        "SELECT entry FROM character_pet WHERE owner = {} AND slot = 0",
+        player->GetGUID().GetCounter());
+
+    if (!result)
+        return;
+
+    uint32 entry = result->Fetch()[0].Get<uint32>();
+
+    Pet* companion = new Pet(player, HUNTER_PET);
+
+    Map* map = player->GetMap();
+    if (!map)
     {
-        QueryResult result = CharacterDatabase.Query(
-            "SELECT entry FROM character_pet WHERE owner = {} AND slot = 0",
-            player->GetGUID().GetCounter());
-    
-        if (!result)
-            return;
-
-        uint32 entry = result->Fetch()[0].Get<uint32>();
-
-        Pet* companion = new Pet(player, HUNTER_PET);
-
-        Map* map = player->GetMap();
-        if (!map)
-        {
-            delete companion;
-            return;
-        }
-
-        uint32 phaseMask = player->GetPhaseMask();
-        ObjectGuid::LowType guidlow = sObjectMgr->GenerateLowGuid(HIGHGUID_PET);
-        uint32 pet_slot = 0;
-
-        if (!companion->Create(guidlow, map, phaseMask, entry, pet_slot))
-        {
-            delete companion;
-            return;
-        }
-
-        companion->InitStatsForLevel(player->getLevel());
-        companion->InitPetCreateSpells();
-
-        companion->SetReactState(REACT_ASSIST);
-        companion->SetCanModifyStats(true);
-    
-        companion->Summon();
-        companion->AIM_Initialize();
-
-        companionGuid = companion->GetGUID();
+        delete companion;
+        return;
     }
+
+    uint32 phaseMask = player->GetPhaseMask();
+    ObjectGuid::LowType guidlow = sObjectMgr->GeneratePetLowGuid(); // <--- hier geändert
+    uint32 pet_slot = 0;
+
+    if (!companion->Create(guidlow, map, phaseMask, entry, pet_slot))
+    {
+        delete companion;
+        return;
+    }
+
+    companion->InitStatsForLevel(player->getLevel());
+    companion->InitPetCreateSpells();
+
+    companion->SetReactState(REACT_ASSIST);
+    companion->SetCanModifyStats(true);
+
+    companion->Summon();
+    companion->AIM_Initialize();
+
+    companionGuid = companion->GetGUID();
+}
+
 
 
     void Despawn(Player* player)
