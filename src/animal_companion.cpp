@@ -58,8 +58,8 @@ private:
 
     void SummonCompanion(Player* player)
     {
-        QueryResult result = CharacterDatabase.PQuery(
-            "SELECT entry FROM character_pet WHERE owner = %u AND slot = 0",
+        QueryResult result = CharacterDatabase.Query(
+            "SELECT entry FROM character_pet WHERE owner = {} AND slot = 0",
             player->GetGUID().GetCounter());
 
         if (!result)
