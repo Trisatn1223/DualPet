@@ -68,24 +68,24 @@ private:
         uint32 entry = result->Fetch()[0].Get<uint32>();
 
         Pet* companion = new Pet(player, HUNTER_PET);
-        if (!companion->CreateBaseAtEntry(entry, player, HUNTER_PET, nullptr))
+        if (!companion->Create(player, entry, HUNTER_PET, nullptr))
         {
             delete companion;
             return;
         }
 
+        companion->InitStatsForLevel(player->getLevel());
+        companion->InitPetCreateSpells();
 
         companion->SetReactState(REACT_ASSIST);
         companion->SetCanModifyStats(true);
-
-        companion->InitStatsForLevel(player->getLevel());
-        companion->InitPetCreateSpells();
 
         companion->Summon();
         companion->AIM_Initialize();
 
         companionGuid = companion->GetGUID();
     }
+
 
     void Despawn(Player* player)
     {
