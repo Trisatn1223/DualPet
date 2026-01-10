@@ -68,11 +68,12 @@ private:
         uint32 entry = result->Fetch()[0].Get<uint32>();
 
         Pet* companion = new Pet(player, HUNTER_PET);
-        if (!companion->CreateBaseAtCreatureEntry(entry, player))
+        if (!companion->CreateBaseAtEntry(entry, player, HUNTER_PET, nullptr))
         {
             delete companion;
             return;
         }
+
 
         companion->SetReactState(REACT_ASSIST);
         companion->SetCanModifyStats(true);
