@@ -10,6 +10,7 @@
  - Summons second pet from slot 0
  - Uses existing character_pet.id as GUID
  - Configurable: Enabled & DamageMultiplier
+ - Compatible with WotLK AzerothCore
 */
 
 class AnimalCompanionPlayerScript : public PlayerScript
@@ -18,21 +19,22 @@ public:
     AnimalCompanionPlayerScript()
         : PlayerScript("AnimalCompanionPlayerScript")
     {
+        // Config laden
         moduleEnabled = sConfigMgr->GetOption<bool>("DualPet.Enabled", true);
         damageMultiplier = sConfigMgr->GetOption<float>("DualPet.DamageMultiplier", 1.0f);
     }
 
-    void OnLogin(Player* player)            // override entfernt
+    void OnLogin(Player* player)
     {
         TrySummon(player);
     }
 
-    void OnLogout(Player* player)           // override entfernt
+    void OnLogout(Player* player)
     {
         Despawn(player);
     }
 
-    void OnUpdate(Player* player, uint32 /*diff*/)  // override entfernt
+    void OnUpdate(Player* player, uint32 /*diff*/)
     {
         if (!player->IsInWorld())
             return;
@@ -43,6 +45,7 @@ public:
         if (!player->GetPet() && HasCompanion(player))
             Despawn(player);
     }
+
 private:
     ObjectGuid companionGuid;
     bool moduleEnabled;
@@ -73,44 +76,43 @@ private:
         SummonCompanion(player);
     }
 
-void SummonCompanion(Player* player)
-{
-    QueryResult result = CharacterDatabase.Query(
-        "SELECT id, entry FROM character_pet WHERE owner = {} AND slot = 0",
-        player->GetGUID().GetCounter());
-
-    if (!result)
-        return;
-
-    Field* fields = result->Fetch();
-    uint32 petDBId = fields[0].Get<uint32>();
-    uint32 entry   = fields[1].Get<uint32>();
-
-    Pet* companion = new Pet(player, HUNTER_PET);
-
-    if (!companion->Create(petDBId, player->GetMap(), player->GetPhaseMask(), entry, 0))
+    void SummonCompanion(Player* player)
     {
-        delete companion;
-        return;
+        // DB-Eintrag des Stall-Pets lesen (slot = 0)
+        QueryResult result = CharacterDatabase.Query(
+            "SELECT id, entry FROM character_pet WHERE owner = {} AND slot = 0",
+            player->GetGUID().GetCounter());
+
+        if (!result)
+            return;
+
+        Field* fields = result->Fetch();
+        uint32 petDBId = fields[0].Get<uint32>(); // LowGUID aus DB
+        uint32 entry   = fields[1].Get<uint32>(); // CreatureEntry
+
+        Pet* companion = new Pet(player, HUNTER_PET);
+
+        if (!companion->Create(petDBId, player->GetMap(), player->GetPhaseMask(), entry, 0))
+        {
+            delete companion;
+            return;
+        }
+
+        // Stats & Spells initialisieren
+        companion->InitStatsForLevel(player->GetLevel());
+        companion->InitPetCreateSpells();
+
+        // Damage-Multiplikator anwenden
+        companion->SetBaseWeaponDamage(companion->GetBaseWeaponDamage() * damageMultiplier);
+
+        // Verhalten & Summon
+        companion->SetReactState(REACT_ASSIST);
+        companion->SetCanModifyStats(true);
+        companion->Summon();
+        companion->AIM_Initialize();
+
+        companionGuid = companion->GetGUID();
     }
-
-    companion->InitStatsForLevel(player->GetLevel());
-    companion->InitPetCreateSpells();
-
-    for (auto &spell : companion->GetPetSpells())
-    {
-        if (spell)
-            spell->SetDamage(spell->GetDamage() * damageMultiplier);
-    }
-
-    companion->SetReactState(REACT_ASSIST);
-    companion->SetCanModifyStats(true);
-    companion->Summon();
-    companion->AIM_Initialize();
-
-    companionGuid = companion->GetGUID();
-}
-
 
     void Despawn(Player* player)
     {
